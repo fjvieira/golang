@@ -1,7 +1,8 @@
 Basic implementations of useful stuff:
-- SimpleThreadPool: A thread pool that runs tasks implementing a Runnable interface (java inspired);
-- Queue: a classic queue data structure;
-- Stack : a simple stack.
+- SimpleThreadPool: a thread pool that runs tasks implementing a Runnable interface (java inspired);
+- Queue: a thread safe queue data structure;
+- Stack : a thread safe stack;
+- Transactional stack: a transactional stack that piles transactions (collections of push-pop operations).
 
 # License
 

@@ -18,14 +18,18 @@ PERFORMANCE OF THIS SOFTWARE.
 
 package stack
 
+import "sync"
+
 /*TransactionalStack A transational stack that can stack transactions contains operations (pop and push).
 This stack can operate without any open transaction. You can open as many transactions as it is necessary.
 In this case, it is a transaction inside another one and a Rollback and a commit will afect the imediately
 underlaying transaction.
 */
+
 type TransactionalStack struct {
 	transactions *Stack
 	stack        *Stack
+	locker       sync.Mutex
 }
 
 type transaction struct {
@@ -39,16 +43,22 @@ type transactionItem struct {
 
 //CreateTransactionalStack Creates a new transaction stack.
 func CreateTransactionalStack() *TransactionalStack {
-	return &TransactionalStack{new(Stack), new(Stack)}
+	return &TransactionalStack{new(Stack), new(Stack), *new(sync.Mutex)}
 }
 
 //OpenTransaction creates a new transaction.
 func (t *TransactionalStack) OpenTransaction() {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+
 	t.transactions.Push(transaction{new(Stack)})
 }
 
 //Commit Commits the last created transaction.
 func (t *TransactionalStack) Commit() {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+
 	currentTransaction, okCurrent := t.transactions.Pop().(transaction)
 
 	if okCurrent {
@@ -64,6 +74,9 @@ func (t *TransactionalStack) Commit() {
 
 //Rollback Rollbacks - cancel - the last created transaction
 func (t *TransactionalStack) Rollback() {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+
 	currentTransaction, okCurrent := t.transactions.Pop().(transaction)
 
 	if okCurrent {
@@ -88,6 +101,9 @@ func (t *TransactionalStack) Rollback() {
 
 //Push Pushs a value from a top of the stack and include in the topmost transaction (if there is one opened)
 func (t *TransactionalStack) Push(value interface{}) interface{} {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+
 	currentTransaction, ok := t.transactions.Peek().(transaction)
 	if ok {
 		currentTransaction.stack.Push(transactionItem{true, value})
@@ -102,6 +118,9 @@ func (t *TransactionalStack) Peek() interface{} {
 
 //Pop Removes the value in the top of stack and include in the topmost transaction (if there is one opened)
 func (t *TransactionalStack) Pop() interface{} {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+
 	currentTransaction, ok := t.transactions.Peek().(transaction)
 	value := t.stack.Pop()
 	if ok {
